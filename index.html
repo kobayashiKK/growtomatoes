@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>🍅 トマト育てて食べまくり！</title>
+<style>
+  :root {
+    --bg: #fdf6e3;
+    --panel: #fffdf7;
+    --line: #e3d9bf;
+    --green: #4caf50;
+    --green-d: #388e3c;
+    --red: #e53935;
+    --red-d: #c62828;
+    --blue: #29b6f6;
+    --brown: #8d6e63;
+    --text: #4e3b2b;
+    --muted: #9b8a72;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Hiragino Maru Gothic ProN", "Yu Gothic", "Meiryo", system-ui, sans-serif;
+    background: linear-gradient(180deg, #bbe1f5 0%, #d9f0c8 55%, #f3e6c4 100%);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 16px;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; }
+  header {
+    text-align: center;
+    margin-bottom: 12px;
+  }
+  header h1 { margin: 0 0 4px; font-size: 26px; }
+  header p { margin: 0; color: var(--muted); font-size: 13px; }
+
+  .topbar {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    justify-content: center;
+    margin-bottom: 12px;
+  }
+  .chip {
+    background: var(--panel);
+    border: 2px solid var(--line);
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: 14px;
+    font-weight: bold;
+    box-shadow: 0 2px 0 var(--line);
+  }
+  .chip .sub { color: var(--muted); font-weight: normal; font-size: 12px; }
+
+  .goal {
+    background: var(--panel);
+    border: 2px solid var(--line);
+    border-radius: 14px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 0 var(--line);
+  }
+  .goal .label { font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .bar { background: #efe7d2; border-radius: 999px; height: 16px; overflow: hidden; }
+  .bar > span { display: block; height: 100%; background: linear-gradient(90deg, #ff7043, var(--red)); width: 0%; transition: width .3s; }
+
+  .garden {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .plot {
+    background: var(--panel);
+    border: 2px solid var(--line);
+    border-radius: 16px;
+    padding: 12px;
+    box-shadow: 0 3px 0 var(--line);
+    position: relative;
+    overflow: hidden;
+  }
+  .plot.selected { border-color: var(--green); box-shadow: 0 0 0 3px rgba(76,175,80,.25), 0 3px 0 var(--line); }
+  .plot.dead { opacity: .65; filter: grayscale(.6); }
+  .plot .scene {
+    height: 110px;
+    background: linear-gradient(180deg, #cfeeff 0%, #e8f7d8 60%, #d8b88f 60%, #c8a173 100%);
+    border-radius: 10px;
+    display: flex; align-items: flex-end; justify-content: center;
+    position: relative;
+    cursor: pointer;
+    user-select: none;
+  }
+  .plot .plant-emoji { font-size: 52px; line-height: 1; margin-bottom: 6px; transition: transform .2s; }
+  .plot .scene:hover .plant-emoji { transform: translateY(-3px); }
+  .badges { position: absolute; top: 6px; left: 6px; display: flex; gap: 3px; flex-wrap: wrap; max-width: 90%; }
+  .badge { font-size: 18px; filter: drop-shadow(0 1px 1px rgba(0,0,0,.2)); }
+  .stage-name { text-align: center; font-weight: bold; margin: 6px 0 2px; font-size: 14px; }
+  .stat { font-size: 12px; margin: 3px 0; }
+  .stat .mini { background: #efe7d2; border-radius: 999px; height: 8px; overflow: hidden; margin-top: 2px; }
+  .stat .mini > span { display: block; height: 100%; }
+  .fruits { text-align: center; font-size: 20px; min-height: 24px; letter-spacing: 1px; }
+  .empty-plot { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--muted); font-size: 13px; flex-direction: column; gap: 6px;}
+
+  .controls {
+    background: var(--panel);
+    border: 2px solid var(--line);
+    border-radius: 16px;
+    padding: 14px;
+    box-shadow: 0 3px 0 var(--line);
+    margin-bottom: 14px;
+  }
+  .sel-info { font-size: 13px; color: var(--muted); margin-bottom: 8px; text-align: center; }
+  .actions { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+  button.act {
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: bold;
+    border: 2px solid var(--line);
+    background: #fff;
+    color: var(--text);
+    border-radius: 12px;
+    padding: 10px 6px;
+    cursor: pointer;
+    box-shadow: 0 2px 0 var(--line);
+    transition: transform .05s;
+  }
+  button.act:hover { background: #fbf3df; }
+  button.act:active { transform: translateY(2px); box-shadow: none; }
+  button.act:disabled { opacity: .4; cursor: not-allowed; }
+  button.act small { display: block; font-weight: normal; color: var(--muted); font-size: 11px; }
+
+  .big-row { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  button.primary {
+    flex: 1; min-width: 160px;
+    font-family: inherit; font-size: 16px; font-weight: bold;
+    border: none; border-radius: 14px; padding: 14px; cursor: pointer; color: #fff;
+    box-shadow: 0 4px 0 rgba(0,0,0,.15);
+  }
+  button.primary:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,.15); }
+  .btn-next { background: linear-gradient(180deg, #66bb6a, var(--green-d)); }
+  .btn-eat { background: linear-gradient(180deg, #ef5350, var(--red-d)); }
+  button.primary:disabled { background: #ccc; cursor: not-allowed; box-shadow: none; }
+
+  .log {
+    background: var(--panel);
+    border: 2px solid var(--line);
+    border-radius: 16px;
+    padding: 12px 14px;
+    box-shadow: 0 3px 0 var(--line);
+    max-height: 200px;
+    overflow-y: auto;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .log h3 { margin: 0 0 6px; font-size: 14px; }
+  .log .entry { padding: 2px 0; border-bottom: 1px dashed #eee3c8; }
+  .log .day-head { font-weight: bold; color: var(--green-d); margin-top: 4px; }
+  .log .bad { color: var(--red-d); }
+  .log .good { color: var(--green-d); }
+
+  .help-toggle { text-align: center; margin: 10px 0; }
+  .help-toggle button { background: none; border: none; color: var(--muted); text-decoration: underline; cursor: pointer; font-family: inherit; font-size: 13px; }
+  .help { display: none; background: var(--panel); border: 2px dashed var(--line); border-radius: 14px; padding: 14px; font-size: 13px; line-height: 1.7; margin-bottom: 14px; }
+  .help.open { display: block; }
+  .help b { color: var(--green-d); }
+
+  /* overlay */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.55);
+    display: none; align-items: center; justify-content: center; z-index: 50; padding: 20px;
+  }
+  .overlay.open { display: flex; }
+  .modal {
+    background: var(--panel); border-radius: 20px; padding: 28px; max-width: 420px; text-align: center;
+    box-shadow: 0 10px 40px rgba(0,0,0,.3);
+  }
+  .modal h2 { margin: 0 0 10px; font-size: 24px; }
+  .modal p { margin: 6px 0; }
+  .modal button {
+    margin-top: 16px; font-family: inherit; font-size: 16px; font-weight: bold;
+    background: var(--green); color: #fff; border: none; border-radius: 12px; padding: 12px 28px; cursor: pointer;
+  }
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--text); color: #fff; padding: 10px 20px; border-radius: 999px; font-size: 14px; font-weight: bold;
+    opacity: 0; transition: all .25s; z-index: 60; pointer-events: none;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  footer { text-align: center; color: var(--muted); font-size: 12px; margin: 16px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🍅 トマト育てて食べまくり！</h1>
+    <p>水やり・脇芽かき・追肥・収穫… 立派なトマトを育てて、たくさん食べよう！</p>
+  </header>
+
+  <div class="topbar">
+    <div class="chip">📅 <span id="day">1</span>日目</div>
+    <div class="chip" id="weather-chip">☀️ <span id="weather">晴れ</span></div>
+    <div class="chip">🧺 在庫 <span id="inventory">0</span></div>
+    <div class="chip">🌱 タネ <span id="seeds">3</span></div>
+    <div class="chip">🥗 食べた数 <span id="eaten">0</span></div>
+  </div>
+
+  <div class="goal">
+    <div class="label">🎯 ゴール：トマトを <b id="goal-num">20</b> 個食べる！</div>
+    <div class="bar"><span id="goal-bar"></span></div>
+  </div>
+
+  <div class="garden" id="garden"></div>
+
+  <div class="controls">
+    <div class="sel-info" id="sel-info">畑をクリックして、お世話する株を選ぼう</div>
+    <div class="actions" id="actions"></div>
+    <div class="big-row">
+      <button class="primary btn-eat" id="eat-btn">🍴 トマトを食べる<small style="font-weight:normal;font-size:11px;display:block">在庫から1個</small></button>
+      <button class="primary btn-next" id="next-btn">🌙 次の日へ</button>
+    </div>
+  </div>
+
+  <div class="help-toggle"><button id="help-btn">▼ 遊び方・コツを見る</button></div>
+  <div class="help" id="help">
+    <p><b>目的：</b>トマトを育てて収穫し、<b>合計20個食べたらクリア！</b></p>
+    <p><b>🌱 タネをまく：</b>空いた畑をクリックして「タネをまく」。発芽→苗→開花→着果→完熟と育ちます。</p>
+    <p><b>💧 水やり：</b>水分が少ないと弱り、多すぎると根腐れ・実割れの原因に。晴れの日は乾きやすい。</p>
+    <p><b>✂️ 脇芽かき：</b>放置すると脇芽が栄養を奪い成長が遅くなる。こまめに取ろう。</p>
+    <p><b>💩 追肥：</b>肥料が切れると実が育たない。着果したら追肥が大事。</p>
+    <p><b>🍃 葉かき：</b>収穫後に古い葉を整理すると風通しが良くなり、病気・虫を防ぎやすい。</p>
+    <p><b>🐛 虫・🐦 鳥・🌧️ 大雨：</b>虫は「虫取り」で駆除。鳥は「ネット」で完熟の実を守る。大雨は水分が急増して実が割れることが。</p>
+    <p>💡 完熟（🍅）になったら「収穫」→「食べる」で食べた数が増えます。株は枯れる前に世話を！</p>
+  </div>
+
+  <div class="log" id="log">
+    <h3>📜 農作業ログ</h3>
+    <div id="log-entries"></div>
+  </div>
+
+  <footer>毎日コツコツお世話しよう 🍅 &copy; トマト農園</footer>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2 id="modal-title"></h2>
+    <p id="modal-body"></p>
+    <button id="modal-btn">もう一度遊ぶ</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const GOAL = 20;
+  const PLOTS = 4;
+  const STAGES = ["タネ", "発芽", "苗", "開花", "着果", "完熟"];
+  const STAGE_ICON = ["🟫", "🌱", "🌿", "🌷", "🫒", "🍅"];
+  const STAGE_THRESHOLD = [3, 3, 4, 3, 5]; // progress needed to leave each stage (index = current stage)
+
+  const WEATHERS = [
+    { name: "晴れ",   icon: "☀️", water: -28, weight: 4 },
+    { name: "くもり", icon: "☁️", water: -16, weight: 3 },
+    { name: "雨",     icon: "🌧️", water: +22, weight: 2 },
+    { name: "大雨",   icon: "⛈️", water: +45, weight: 1, storm: true },
+  ];
+
+  let state;
+
+  function freshPlant() {
+    return {
+      planted: false,
+      alive: false,
+      stage: 0,
+      progress: 0,
+      water: 60,
+      fert: 60,
+      health: 100,
+      shoots: 0,
+      leafMess: 0,   // 古い葉の溜まり具合（高いと病気/虫リスク↑）
+      pests: false,
+      net: false,
+      fruits: [],    // {ripe:0-100, split:false}
+    };
+  }
+
+  function init() {
+    state = {
+      day: 1,
+      weather: WEATHERS[0],
+      seeds: 3,
+      inventory: 0,
+      eaten: 0,
+      selected: null,
+      plants: Array.from({ length: PLOTS }, freshPlant),
+      log: [],
+      over: false,
+    };
+    state.plants[0].planted = state.plants[0].alive = true; // 最初の1株は植わった状態で開始
+    logDay();
+    log("🌱 1番の畑にタネをまきました。お世話を始めよう！");
+    render();
+  }
+
+  // ---------- helpers ----------
+  function pickWeather() {
+    const pool = [];
+    WEATHERS.forEach(w => { for (let i = 0; i < w.weight; i++) pool.push(w); });
+    return pool[(Math.random() * pool.length) | 0];
+  }
+  function clamp(v, a = 0, b = 100) { return Math.max(a, Math.min(b, v)); }
+
+  function log(msg, cls = "") {
+    state.log.push({ msg, cls });
+  }
+  function logDay() {
+    state.log.push({ msg: `── ${state.day}日目（${state.weather.icon}${state.weather.name}）──`, cls: "day-head" });
+  }
+
+  let toastTimer;
+  function toast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 1400);
+  }
+
+  // ---------- actions on selected plant ----------
+  function selPlant() {
+    return state.selected != null ? state.plants[state.selected] : null;
+  }
+
+  function doAction(action) {
+    const p = selPlant();
+    if (state.over) return;
+
+    if (action === "plant") {
+      const idx = state.selected;
+      const pl = state.plants[idx];
+      if (pl.planted) return;
+      if (state.seeds <= 0) { toast("タネがありません"); return; }
+      state.seeds--;
+      Object.assign(pl, freshPlant());
+      pl.planted = pl.alive = true;
+      log(`🌱 ${idx + 1}番の畑にタネをまきました`, "good");
+      toast("タネをまいた 🌱");
+      render();
+      return;
+    }
+
+    if (!p || !p.alive) return;
+
+    switch (action) {
+      case "water":
+        p.water = clamp(p.water + 35);
+        toast("お水をあげた 💧");
+        log(`💧 ${state.selected + 1}番に水やり（水分 ${p.water}%）`);
+        break;
+      case "shoots":
+        if (p.shoots === 0) { toast("脇芽はありません"); return; }
+        log(`✂️ ${state.selected + 1}番の脇芽を ${p.shoots} 本かいた`, "good");
+        p.shoots = 0;
+        p.health = clamp(p.health + 4);
+        toast("脇芽かき完了 ✂️");
+        break;
+      case "fert":
+        p.fert = clamp(p.fert + 40);
+        toast("追肥した 💩");
+        log(`💩 ${state.selected + 1}番に追肥（肥料 ${p.fert}%）`);
+        break;
+      case "leaf":
+        if (p.leafMess === 0) { toast("葉はきれいです"); return; }
+        log(`🍃 ${state.selected + 1}番の葉かきをした（風通し改善）`, "good");
+        p.leafMess = 0;
+        p.health = clamp(p.health + 6);
+        toast("葉かき完了 🍃");
+        break;
+      case "pest":
+        if (!p.pests) { toast("虫はいません"); return; }
+        p.pests = false;
+        p.health = clamp(p.health + 3);
+        log(`🐛 ${state.selected + 1}番の虫を駆除した`, "good");
+        toast("虫を退治した 🐛");
+        break;
+      case "net":
+        p.net = !p.net;
+        log(`🥅 ${state.selected + 1}番のネットを${p.net ? "張った" : "外した"}`);
+        toast(p.net ? "ネットを張った 🥅" : "ネットを外した");
+        break;
+      case "harvest": {
+        const ripe = p.fruits.filter(f => f.ripe >= 100 && !f.split).length;
+        if (ripe === 0) { toast("完熟の実がありません"); return; }
+        state.inventory += ripe;
+        p.fruits = p.fruits.filter(f => !(f.ripe >= 100 && !f.split));
+        p.leafMess = clamp(p.leafMess + 20); // 収穫後は葉が乱れる→葉かきが必要
+        log(`🍅 ${state.selected + 1}番から ${ripe} 個収穫！（要・葉かき）`, "good");
+        toast(`${ripe}個 収穫した 🍅`);
+        break;
+      }
+    }
+    render();
+  }
+
+  function eat() {
+    if (state.over) return;
+    if (state.inventory <= 0) { toast("在庫がありません。収穫しよう！"); return; }
+    state.inventory--;
+    state.eaten++;
+    log(`🍴 トマトを食べた！（合計 ${state.eaten} 個）`, "good");
+    toast("おいしい！🍴");
+    if (state.eaten >= GOAL) {
+      win();
+    }
+    render();
+  }
+
+  // ---------- day progression ----------
+  function nextDay() {
+    if (state.over) return;
+    state.day++;
+    state.weather = pickWeather();
+    logDay();
+
+    let anyAlive = false;
+
+    state.plants.forEach((p, i) => {
+      if (!p.planted || !p.alive) return;
+      anyAlive = true;
+      const n = i + 1;
+
+      // --- weather: water ---
+      p.water = clamp(p.water + state.weather.water);
+
+      // 大雨で実割れ
+      if (state.weather.storm) {
+        const targets = p.fruits.filter(f => !f.split && f.ripe > 40);
+        targets.forEach(f => {
+          if (Math.random() < 0.5) { f.split = true; }
+        });
+        const splitN = targets.filter(f => f.split).length;
+        if (splitN > 0) log(`⛈️ 大雨で ${n}番の実が ${splitN} 個割れてしまった…`, "bad");
+      }
+
+      // --- water stress ---
+      if (p.water < 20) {
+        p.health = clamp(p.health - 16);
+        log(`🥵 ${n}番が水切れ気味（体力 ${p.health}%）`, "bad");
+      } else if (p.water > 92) {
+        p.health = clamp(p.health - 8);
+        // 過湿で実割れも
+        p.fruits.forEach(f => { if (!f.split && f.ripe > 50 && Math.random() < 0.25) f.split = true; });
+        log(`💦 ${n}番が過湿ぎみ（根腐れ注意）`, "bad");
+      }
+
+      // --- fertilizer decay ---
+      p.fert = clamp(p.fert - 12);
+
+      // --- side shoots grow ---
+      if (p.stage >= 2 && Math.random() < 0.6) {
+        p.shoots += 1 + (Math.random() < 0.3 ? 1 : 0);
+      }
+
+      // --- leaf mess grows slowly ---
+      if (p.stage >= 3) p.leafMess = clamp(p.leafMess + 6);
+
+      // --- pests appear (病気/虫：葉が乱れる・体力低いと出やすい) ---
+      if (!p.pests) {
+        const risk = 0.06 + p.leafMess * 0.003 + (p.health < 50 ? 0.1 : 0);
+        if (Math.random() < risk) {
+          p.pests = true;
+          log(`🐛 ${n}番に虫がついた！「虫取り」で駆除しよう`, "bad");
+        }
+      }
+      if (p.pests) {
+        p.health = clamp(p.health - 12);
+      }
+
+      // --- birds peck ripe fruit ---
+      const ripeFruits = p.fruits.filter(f => f.ripe >= 100 && !f.split);
+      if (ripeFruits.length > 0 && !p.net && Math.random() < 0.4) {
+        const victim = ripeFruits[0];
+        p.fruits.splice(p.fruits.indexOf(victim), 1);
+        log(`🐦 ${n}番の完熟トマトが鳥に食べられた！（ネットで防ごう）`, "bad");
+      }
+
+      // --- growth ---
+      const goodWater = p.water >= 30 && p.water <= 85;
+      const shootPenalty = Math.min(0.6, p.shoots * 0.12);
+      let growth = 0;
+      if (p.health > 25 && goodWater) {
+        growth = 1 * (1 - shootPenalty);
+        if (p.fert < 20) growth *= 0.4; // 肥料切れで成長鈍化
+        if (p.health < 50) growth *= 0.7;
+      }
+      p.progress += growth;
+
+      // stage up
+      if (p.stage < STAGES.length - 1 && p.progress >= STAGE_THRESHOLD[p.stage]) {
+        p.progress = 0;
+        p.stage++;
+        log(`🌟 ${n}番が「${STAGES[p.stage]}」になった！`, "good");
+        if (p.stage === 4) {
+          // 着果：実をつける
+          const count = 2 + (Math.random() < 0.5 ? 1 : 0);
+          for (let k = 0; k < count; k++) p.fruits.push({ ripe: 0, split: false });
+          log(`🫒 ${n}番に実が ${count} 個ついた！追肥して育てよう`, "good");
+        }
+      }
+
+      // --- ripen fruits (着果以降) ---
+      if (p.stage >= 4) {
+        let rate = 14;
+        if (p.fert < 20) rate *= 0.4;
+        if (p.health < 50) rate *= 0.6;
+        if (!goodWater) rate *= 0.6;
+        p.fruits.forEach(f => { if (!f.split) f.ripe = clamp(f.ripe + rate); });
+      }
+
+      // --- health recovery if cared well ---
+      if (goodWater && !p.pests && p.fert > 30 && p.shoots <= 1) {
+        p.health = clamp(p.health + 5);
+      }
+
+      // --- death ---
+      if (p.health <= 0) {
+        p.alive = false;
+        p.health = 0;
+        log(`💀 ${n}番のトマトが枯れてしまった…`, "bad");
+      }
+    });
+
+    // ゲームオーバー判定：株が全滅 かつ 種なし かつ 在庫なし で目標未達
+    const noLivePlants = state.plants.every(p => !p.alive);
+    if (noLivePlants && state.seeds <= 0 && state.inventory <= 0 && state.eaten < GOAL) {
+      render();
+      lose();
+      return;
+    }
+
+    render();
+  }
+
+  // ---------- end states ----------
+  function win() {
+    state.over = true;
+    showModal("🎉 クリア！", `${state.day}日目までにトマトを ${state.eaten} 個 食べました！立派なトマト農家です🍅`);
+  }
+  function lose() {
+    state.over = true;
+    showModal("🥀 ゲームオーバー", `株が全滅し、タネも在庫もなくなってしまいました…。食べた数：${state.eaten}個。もう一度挑戦しよう！`);
+  }
+  function showModal(title, body) {
+    document.getElementById("modal-title").textContent = title;
+    document.getElementById("modal-body").textContent = body;
+    document.getElementById("overlay").classList.add("open");
+  }
+
+  // ---------- rendering ----------
+  function statBar(val, color) {
+    return `<div class="mini"><span style="width:${clamp(val)}%;background:${color}"></span></div>`;
+  }
+
+  function fruitDisplay(p) {
+    if (p.stage < 4 || p.fruits.length === 0) return "&nbsp;";
+    return p.fruits.map(f => {
+      if (f.split) return "💥";
+      if (f.ripe >= 100) return "🍅";
+      if (f.ripe >= 50) return "🟠";
+      return "🟢";
+    }).join("");
+  }
+
+  function render() {
+    document.getElementById("day").textContent = state.day;
+    document.getElementById("weather").textContent = state.weather.name;
+    document.getElementById("weather-chip").firstChild.textContent = state.weather.icon + " ";
+    document.getElementById("seeds").textContent = state.seeds;
+    document.getElementById("inventory").textContent = state.inventory;
+    document.getElementById("eaten").textContent = state.eaten;
+    document.getElementById("goal-num").textContent = GOAL;
+    document.getElementById("goal-bar").style.width = Math.min(100, (state.eaten / GOAL) * 100) + "%";
+
+    // garden
+    const garden = document.getElementById("garden");
+    garden.innerHTML = "";
+    state.plants.forEach((p, i) => {
+      const plot = document.createElement("div");
+      plot.className = "plot" + (state.selected === i ? " selected" : "") + (p.planted && !p.alive ? " dead" : "");
+      plot.onclick = () => { state.selected = i; render(); };
+
+      if (!p.planted) {
+        plot.innerHTML = `
+          <div class="scene"><div class="empty-plot">🟫<br>空き畑</div></div>
+          <div class="stage-name">― 空き ―</div>
+          <div class="stat" style="text-align:center;color:var(--muted)">タネをまけます</div>`;
+        garden.appendChild(plot);
+        return;
+      }
+
+      const icon = !p.alive ? "🥀" : STAGE_ICON[p.stage];
+      const badges = [];
+      if (p.alive) {
+        if (p.pests) badges.push("🐛");
+        if (p.shoots > 0) badges.push("✂️");
+        if (p.fert < 20) badges.push("💩");
+        if (p.water < 20) badges.push("🥵");
+        if (p.water > 92) badges.push("💦");
+        if (p.leafMess > 40) badges.push("🍃");
+        if (p.net) badges.push("🥅");
+      }
+
+      plot.innerHTML = `
+        <div class="badges">${badges.map(b => `<span class="badge">${b}</span>`).join("")}</div>
+        <div class="scene"><div class="plant-emoji">${icon}</div></div>
+        <div class="stage-name">${i + 1}番：${p.alive ? STAGES[p.stage] : "枯れた"}</div>
+        <div class="fruits">${fruitDisplay(p)}</div>
+        <div class="stat">💧 水分 ${p.water | 0}% ${statBar(p.water, p.water < 20 || p.water > 92 ? "#e53935" : "#29b6f6")}</div>
+        <div class="stat">💩 肥料 ${p.fert | 0}% ${statBar(p.fert, p.fert < 20 ? "#e53935" : "#8d6e63")}</div>
+        <div class="stat">❤️ 体力 ${p.health | 0}% ${statBar(p.health, p.health < 40 ? "#e53935" : "#4caf50")}</div>
+      `;
+      garden.appendChild(plot);
+    });
+
+    renderActions();
+    renderLog();
+    document.getElementById("eat-btn").disabled = state.inventory <= 0 || state.over;
+    document.getElementById("next-btn").disabled = state.over;
+  }
+
+  function renderActions() {
+    const wrap = document.getElementById("actions");
+    const info = document.getElementById("sel-info");
+    wrap.innerHTML = "";
+    const p = selPlant();
+
+    if (state.selected == null) {
+      info.textContent = "畑をクリックして、お世話する株を選ぼう";
+      return;
+    }
+    const n = state.selected + 1;
+
+    if (!p.planted) {
+      info.innerHTML = `<b>${n}番の畑</b>（空き）`;
+      addBtn(wrap, "🌱 タネをまく", `残り${state.seeds}`, () => doAction("plant"), state.seeds <= 0);
+      return;
+    }
+    if (!p.alive) {
+      info.innerHTML = `<b>${n}番の畑</b>（枯れた株）`;
+      addBtn(wrap, "🧹 片付けて空きに", "再利用", () => {
+        Object.assign(state.plants[state.selected], freshPlant());
+        log(`🧹 ${n}番を片付けた`); render();
+      });
+      return;
+    }
+
+    const ripe = p.fruits.filter(f => f.ripe >= 100 && !f.split).length;
+    info.innerHTML = `<b>${n}番</b>：${STAGES[p.stage]}${ripe > 0 ? ` ・完熟${ripe}個！` : ""}`;
+
+    addBtn(wrap, "💧 水やり", "水分+35", () => doAction("water"));
+    addBtn(wrap, "✂️ 脇芽かき", p.shoots > 0 ? `脇芽${p.shoots}本` : "なし", () => doAction("shoots"), p.shoots === 0);
+    addBtn(wrap, "💩 追肥", "肥料+40", () => doAction("fert"));
+    addBtn(wrap, "🍃 葉かき", p.leafMess > 0 ? "風通しUP" : "きれい", () => doAction("leaf"), p.leafMess === 0);
+    addBtn(wrap, "🐛 虫取り", p.pests ? "虫がいる!" : "いない", () => doAction("pest"), !p.pests);
+    addBtn(wrap, p.net ? "🥅 ネット解除" : "🥅 ネット", p.net ? "張り中" : "鳥よけ", () => doAction("net"));
+    addBtn(wrap, "🍅 収穫", ripe > 0 ? `${ripe}個` : "未完熟", () => doAction("harvest"), ripe === 0);
+  }
+
+  function addBtn(wrap, label, sub, fn, disabled = false) {
+    const b = document.createElement("button");
+    b.className = "act";
+    b.innerHTML = `${label}<small>${sub}</small>`;
+    b.disabled = disabled || state.over;
+    b.onclick = fn;
+    wrap.appendChild(b);
+  }
+
+  function renderLog() {
+    const box = document.getElementById("log-entries");
+    box.innerHTML = state.log.slice(-60).map(e => {
+      if (e.cls === "day-head") return `<div class="day-head">${e.msg}</div>`;
+      return `<div class="entry ${e.cls}">${e.msg}</div>`;
+    }).join("");
+    document.getElementById("log").scrollTop = document.getElementById("log").scrollHeight;
+  }
+
+  // ---------- wire up ----------
+  document.getElementById("next-btn").onclick = nextDay;
+  document.getElementById("eat-btn").onclick = eat;
+  document.getElementById("help-btn").onclick = () => {
+    const h = document.getElementById("help");
+    h.classList.toggle("open");
+    document.getElementById("help-btn").textContent = h.classList.contains("open") ? "▲ 閉じる" : "▼ 遊び方・コツを見る";
+  };
+  document.getElementById("modal-btn").onclick = () => {
+    document.getElementById("overlay").classList.remove("open");
+    init();
+  };
+
+  init();
+})();
+</script>
+</body>
+</html>
